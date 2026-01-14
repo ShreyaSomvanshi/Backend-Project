@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js";
 import { UploadOnCloudinary } from "../utilities/cloudinary.js"
 import { ApiResponse } from "../utilities/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 const generateAccessandRefreshToken = async (userId) => {
     try {
@@ -114,7 +114,7 @@ const logoutUser = asyncHandler( async (req,res)=>{
         req.user._id,
         {
             $set:{
-                refreshToken:undefined
+                refreshToken:1
             }
         },
         {
@@ -275,6 +275,8 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
         throw new ApiError(400,"username is missing")
     }
 
+    const loggedInUserId = req.user._id;
+
     const channel = await User.aggregate([
         {
             $match:{
@@ -307,7 +309,13 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
                 },
                 isSubscribed:{
                     $cond:{
-                        if:{$in:[req.user?._id,$subscribers]},
+                        if:{
+                            $in: [
+                                // Explicitly convert the logged-in user's ID to an ObjectId
+                                new mongoose.Types.ObjectId(loggedInUserId),
+                                "$subscribers.subscriber" 
+                            ]
+                        },
                         then:true,
                         else:false
                     }
@@ -341,7 +349,7 @@ const getWatchHistory = asyncHandler(async (req,res) => {
     const user = await User.aggregate([
         {
             $match:{
-                _id:new Mongoose.Types.ObjectId(req.user._id)
+                _id:new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
@@ -380,7 +388,7 @@ const getWatchHistory = asyncHandler(async (req,res) => {
         }
     ])
 
-    return res.status(200).json(200,user[0].watchHistory,"Watch History fetched succesfully.")
+    return res.status(200).json(new ApiResponse(200,user[0].watchHistory,"Watch History fetched succesfully."))
 })
 
 export {registerUser,loginUser,
