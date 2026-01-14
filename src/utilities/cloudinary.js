@@ -26,4 +26,8 @@ const UploadOnCloudinary = async(localFilePath)=>{
     }
 }
 
+
+//task:delete image from clodinary
+//const DeleteFromCloudinary = async(cloudinaryURL)=>{}
+
 export {UploadOnCloudinary}
