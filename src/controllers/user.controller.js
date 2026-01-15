@@ -75,7 +75,7 @@ const registerUser = asyncHandler( async (req,res) => {
 const loginUser = asyncHandler(async (req,res) =>{
     
     const {email,username,password} = req.body;
-    console.log("body  recieved",req.body)
+    
     if (!username && !email){
         throw new ApiError(400,"username or email is required")
     }
@@ -232,7 +232,7 @@ const updateUserAvatar = asyncHandler(async (req,res) => {
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-             $set:{
+            $set:{
                avatar:avatar.url
             }
         },
