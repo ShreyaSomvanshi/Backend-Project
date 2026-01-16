@@ -2,12 +2,14 @@ import { asyncHandler } from "../utilities/asyncHandler.js";
 import { ApiError } from "../utilities/ApiError.js";
 import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js"
-import { UploadOnCloudinary } from "../utilities/cloudinary.js"
+import { UploadOnCloudinary,deleteFromCloudinary } from "../utilities/cloudinary.js"
 import { ApiResponse } from "../utilities/ApiResponse.js";
+import { getVideoDuration } from "../utilities/videoDuration.js";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose,{isValidObjectId} from "mongoose";
+import { text } from "express";
 
-const publishAVideo = asyncHandler(async (req, res) => {
+const publishAVideo = asyncHandler(async (req, res) => { 
     const { title, description} = req.body
     // TODO: get video, upload to cloudinary, create video
     if(!title||!description){
@@ -18,10 +20,12 @@ const publishAVideo = asyncHandler(async (req, res) => {
     if (!videoPath) {
         throw new ApiError(400,"Video is required.")
     }
+    
     const videoFile = await UploadOnCloudinary(videoPath)
     if(!videoFile){
         throw new ApiError(500,"Something went wrong while uploading video file on cloudinary.")
     }
+    const durationInSeconds = Math.round(videoFile.duration)
     
     const ThumbnailPath = req.files?.Thumbnail?.[0]?.path;
     if(!ThumbnailPath){
@@ -43,19 +47,24 @@ const publishAVideo = asyncHandler(async (req, res) => {
         videoFile:videoFile.url,
         Thumbnail:Thumbnail.url,
         owner,
-        isPublished:true
+        isPublished:true,
+        duration:durationInSeconds
     })
 
     if (!video) {
         throw new ApiError(500,"Something went wrong while publishing video.")
     }
 
-    res.status(201).json(new ApiResponse(200,video,"Video  published successfully."))
+    res.status(201).json(new ApiResponse(201,video,"Video  published successfully."))
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400,"Invalid video")
+    }
+
     const video = await Video.findById(videoId)
 
     if(!video){
@@ -70,6 +79,10 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400,"Invalid video")
+    }
+
     const {title,description} = req.body;
     const ThumbnailPath = req.files?.Thumbnail?.[0]?.path;
 
@@ -100,14 +113,24 @@ const updateVideo = asyncHandler(async (req, res) => {
     let newThumbnailUrl = null;
     if (ThumbnailPath) {
         newThumbnailUrl = await uploadOnCloudinary(ThumbnailPath)
-    }
 
-    if (!newThumbnailUrl) {
-            throw new ApiError(500, "Failed to upload new thumbnail.");
-    }
-    updateFields.thumbnail = newThumbnailUrl.url;
+        if (!newThumbnailUrl) {
+        throw new ApiError(500, "Failed to upload new thumbnail.");
+        }
+        updateFields.thumbnail = newThumbnailUrl.url;
 
-    //delete old thumbnail from cloudinary
+        //delete old thumbnail from cloudinary
+        if(oldThumbnailUrl){
+            try{
+                await deleteFromCloudinary(oldThumbnailUrl,"image")
+                console.log("Old thumbnail deleted from cloudinary.")
+            }
+            catch(error){
+                console.log(error)
+                throw new ApiError(500,"Something went wrong while deleting.");
+            }
+        }
+    }
 
     const updatedVideo = await Video.findByIdAndUpdate(
         videoId,
@@ -124,6 +147,10 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400,"Invalid video")
+    }
+
     const video = await Video.findById(videoId)
 
     if (!video) {
@@ -144,12 +171,36 @@ const deleteVideo = asyncHandler(async (req, res) => {
     }
 
     //delete Thumbnail and Video from cloudinary
+    if (oldThumbnailUrl) {
+        try{
+            await deleteFromCloudinary(oldThumbnailUrl,"image")
+            console.log("Old thumbnail deleted from cloudinary.")
+        }
+        catch(error){
+            console.log(error)
+            throw new ApiError(500,"Something went wrong while deleting.");
+        }
+    }
+
+    if(oldVideoUrl){
+        try {
+            await deleteFromCloudinary(oldVideoUrl,"video")
+            console.log("Old Video deleted from cloudinary.")
+        } catch (error) {
+            console.log(error)
+            throw new ApiError(500,"Something went wrong while deleting.");
+        }
+    }
 
     return res.status(200).json(200,{},"Video deleted successfully.")
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400,"Invalid video")
+    }
     
     const video = await Video.findById(videoId)
 
@@ -194,6 +245,58 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+    const pipeline = []; 
+
+    if(query){
+        pipeline.push({
+            $search:{
+                index:"search-index",
+                text:{
+                    query:query,
+                    path:["title,description"]
+                }
+            }
+        })
+    }
+
+    if (userId) {
+        if(!isValidObjectId(userId)){
+            throw new ApiError(400,"Invalid userId")
+        }
+
+        pipeline.push({
+            $match:{
+                owner: new mongoose.Types.ObjectId(userId)
+            }
+        })
+    }
+
+    pipeline.push({
+        $match:{
+            isPublished:tru
+        }
+    })
+
+    if (sortBy&&sortType) {
+        pipeline.push({
+            $sort:{
+                [sortBy]:sortType ==="asc"?1:-1
+            }
+        })
+    }else{
+        pipeline.push({$sort:{createdAt:-1}})
+    }
+
+    const videoAggregate = Video.aggregate(pipeline)
+
+    const options = {
+        page:parseInt(page,10),
+        limit:parseInt(limit,10)
+    }
+
+    const video = await Video.aggregatePaginate(videoAggregate,options)
+
+    res.status(200).json(new ApiResponse(200,video,"Videos fetched successfully."))
 })
 
 export {
