@@ -4,7 +4,6 @@ import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js"
 import { UploadOnCloudinary,deleteFromCloudinary } from "../utilities/cloudinary.js"
 import { ApiResponse } from "../utilities/ApiResponse.js";
-import { getVideoDuration } from "../utilities/videoDuration.js";
 import jwt from "jsonwebtoken";
 import mongoose,{isValidObjectId} from "mongoose";
 import { text } from "express";
