@@ -1,5 +1,7 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {Like} from "../models/like.model.js"
+import {Comment} from "../models/comment.model.js"
+import {Tweet} from "../models/tweet.model.js"
 import {Video} from "../models/video.model.js"
 import {ApiError} from "../utilities/ApiError.js"
 import {ApiResponse} from "../utilities/ApiResponse.js"
@@ -46,7 +48,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid comment ID");
     }
 
-    const comment = await Video.findById(commentId);
+    const comment = await Comment.findById(commentId);
     if (!comment) {
         throw new ApiError(404, "Comment not found");
     }
@@ -61,7 +63,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, { isLiked: false }, "Comment unliked successfully"));
     } else {
         await Like.create({
-            video: videoId,
+            comment: commentId,
             likedBy: userId
         });
 
@@ -78,7 +80,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid comment ID");
     }
 
-    const tweet = await Video.findById(tweetId);
+    const tweet = await Tweet.findById(tweetId);
     if (!tweet) {
         throw new ApiError(404, "Tweet not found");
     }
