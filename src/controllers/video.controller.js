@@ -272,7 +272,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     pipeline.push({
         $match:{
-            isPublished:tru
+            isPublished:true
         }
     })
 
