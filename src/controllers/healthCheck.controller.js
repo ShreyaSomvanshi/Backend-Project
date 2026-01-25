@@ -1,6 +1,6 @@
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
-import {asyncHandler} from "../utils/asyncHandler.js"
+import {ApiError} from "../utilities/ApiError.js"
+import {ApiResponse} from "../utilities/ApiResponse.js"
+import {asyncHandler} from "../utilities/asyncHandler.js"
 
 
 const healthcheck = asyncHandler(async (req, res) => {
