@@ -171,7 +171,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(403, "You do not have permission to update this playlist.");
     }
 
-    const updatedPlaylist = await Playlist.findByIdAndUpdate(PlaylistId,
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(playlistId,
         {
             $set:{name:name,description:description}
         },
