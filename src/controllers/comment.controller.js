@@ -86,7 +86,7 @@ const updateComment = asyncHandler(async (req, res) => {
         throw new ApiError(500,"something went wrong while updating Comment.")
     }
 
-    return res.status(200).json(new ApiResponse(200,updatedTweet,"Comment updated successfully."))
+    return res.status(200).json(new ApiResponse(200,updatedComment,"Comment updated successfully."))
 })
 
 const deleteComment = asyncHandler(async (req, res) => {
