@@ -44,8 +44,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-    const {channelId} = req.params
-    console.log("Recieved ID:",channelId)
+    const {subscriberId} = req.params
 
     if(!isValidObjectId(channelId)){
         throw new ApiError(400,"Invalid channel Id")
@@ -92,8 +91,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
 // controller to return channel list to which user has subscribed
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-    const { subscriberId } = req.params
-    console.log("Recieved subscriber Id:",subscriberId)
+    const {channelId } = req.params
 
     if(!isValidObjectId(subscriberId)){
         throw new ApiError(400,"Invalid subscriber Id")
