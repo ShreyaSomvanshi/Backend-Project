@@ -52,7 +52,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
 })
 
 const getChannelVideos = asyncHandler(async (req, res) => {
-    const { channelId } = req.params;
+    const { channelId } = req.user?._id;
     // TODO: Get all the videos uploaded by the channel
     if (!channelId || !isValidObjectId(channelId)) {
         throw new ApiError(400, "Invalid Channel ID.");
